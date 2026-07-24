@@ -1,4 +1,4 @@
-# Maintainer: wraith <wraith@plasma.xyznuts.workers.dev/>
+# Maintainer: wraith <xyznuts@gmail.com/>
 pkgname=plasma-visual
 _pkgname=plasma
 pkgver=1.0.0
