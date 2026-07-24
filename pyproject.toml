@@ -11,4 +11,4 @@ requires-python = ">=3.8"
 dependencies = []
 
 [project.scripts]
-plasma-visual = "plasma.main:main"
+plasma-visual = "main:main"
