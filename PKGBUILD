@@ -1,5 +1,5 @@
-# Maintainer: Your Name <wraith@plasma.xyznuts.workers.dev/>
-pkgname=python-plasma
+# Maintainer: wraith <wraith@plasma.xyznuts.workers.dev/>
+pkgname=plasma-visual
 _pkgname=plasma
 pkgver=1.0.0
 pkgrel=1
