@@ -1,1 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>plasma — terminal visualization</title>
+<style>
+  :root{
+    --black:#0a0a0a;
+    --panel:#111111;
+    --line:#2a2a2a;
+    --grey-dim:#6b6b6b;
+    --grey:#9a9a9a;
+    --grey-bright:#c9c9c9;
+    --white:#f2f2f2;
+  }
 
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--black);
+    color:var(--grey-bright);
+    font-family:'IBM Plex Mono','JetBrains Mono',ui-monospace,'SF Mono',Consolas,monospace;
+    line-height:1.6;
+    font-size:15px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:50;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.018) 0px,
+      rgba(255,255,255,0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode:overlay;
+  }
+
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:49;
+    background:radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 130%);
+  }
+
+  .wrap{
+    max-width:900px;
+    margin:0 auto;
+    padding:0 28px;
+  }
+
+  
+  header{
+    border-bottom:1px solid var(--line);
+    padding:18px 0;
+  }
+  header .wrap{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:14px;
+    letter-spacing:0.02em;
+    color:var(--grey-bright);
+  }
+  .dot-row{display:flex;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--grey-dim);}
+  .dot.on{background:var(--white);}
+  header nav a{
+    color:var(--grey);
+    text-decoration:none;
+    font-size:13px;
+    margin-left:22px;
+    border-bottom:1px solid transparent;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  header nav a:hover{color:var(--white);border-color:var(--grey-dim);}
+
+  
+  .hero{
+    padding:90px 0 70px;
+  }
+  .eyebrow{
+    color:var(--grey-dim);
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    margin-bottom:22px;
+  }
+  .eyebrow::before{content:"$ ";color:var(--grey);}
+
+  h1{
+    font-size:clamp(40px,7vw,72px);
+    font-weight:600;
+    letter-spacing:-0.02em;
+    color:var(--white);
+    line-height:1.02;
+    margin-bottom:22px;
+  }
+  h1 .cursor{
+    display:inline-block;
+    width:0.5em;
+    background:var(--white);
+    animation:blink 1s steps(1) infinite;
+    margin-left:4px;
+    transform:translateY(-0.06em);
+  }
+  @keyframes blink{
+    0%,49%{opacity:1;}
+    50%,100%{opacity:0;}
+  }
+
+  .tagline{
+    max-width:560px;
+    color:var(--grey);
+    font-size:16px;
+    margin-bottom:40px;
+  }
+  .tagline strong{color:var(--grey-bright);font-weight:500;}
+
+  .cta-row{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    background:var(--white);
+    color:var(--black);
+    border:1px solid var(--white);
+    padding:13px 22px;
+    font-family:inherit;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:0.01em;
+    text-decoration:none;
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease, transform .1s ease;
+  }
+  .btn:hover{background:transparent;color:var(--white);}
+  .btn:active{transform:translateY(1px);}
+  .btn svg{width:15px;height:15px;flex-shrink:0;}
+
+  .btn-ghost{
+    color:var(--grey);
+    text-decoration:none;
+    font-size:13px;
+    border-bottom:1px solid var(--grey-dim);
+    padding-bottom:2px;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .btn-ghost:hover{color:var(--white);border-color:var(--white);}
+
+  
+  .term{
+    margin-top:64px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    border-radius:6px;
+    overflow:hidden;
+    box-shadow:0 40px 80px -30px rgba(0,0,0,0.8);
+  }
+  .term-bar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:11px 14px;
+    border-bottom:1px solid var(--line);
+    background:#0d0d0d;
+  }
+  .term-bar .dot{width:10px;height:10px;}
+  .term-bar span{
+    margin-left:8px;
+    font-size:12px;
+    color:var(--grey-dim);
+  }
+  .term-body{
+    padding:26px 24px 30px;
+    font-size:13px;
+    color:var(--grey);
+    overflow-x:auto;
+  }
+  .term-body .line{white-space:pre;}
+  .term-body .prompt{color:var(--grey-dim);}
+  .term-body .out{color:var(--grey-bright);}
+  .term-body .bright{color:var(--white);}
+
+  #plasma-canvas{
+    display:block;
+    width:100%;
+    height:220px;
+    background:#000;
+    margin-top:16px;
+    border:1px solid var(--line);
+  }
+
+  
+  section{
+    padding:70px 0;
+    border-top:1px solid var(--line);
+  }
+  .section-label{
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--grey-dim);
+    margin-bottom:34px;
+  }
+
+  h2{
+    font-size:28px;
+    color:var(--white);
+    font-weight:600;
+    letter-spacing:-0.01em;
+    margin-bottom:18px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  .cell{
+    background:var(--black);
+    padding:26px 22px;
+  }
+  .cell .idx{
+    font-size:12px;
+    color:var(--grey-dim);
+    margin-bottom:14px;
+  }
+  .cell h3{
+    color:var(--white);
+    font-size:15px;
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .cell p{
+    color:var(--grey);
+    font-size:13.5px;
+  }
+
+  pre.codeblock{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:20px 22px;
+    font-size:13px;
+    color:var(--grey-bright);
+    overflow-x:auto;
+  }
+  pre.codeblock .c{color:var(--grey-dim);}
+  pre.codeblock .k{color:var(--white);}
+
+  footer{
+    border-top:1px solid var(--line);
+    padding:34px 0 50px;
+    color:var(--grey-dim);
+    font-size:12.5px;
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  footer a{color:var(--grey);text-decoration:none;border-bottom:1px solid var(--grey-dim);}
+  footer a:hover{color:var(--white);border-color:var(--white);}
+
+  @media (max-width:680px){
+    .grid{grid-template-columns:1fr;}
+    header nav{display:none;}
+    .term-body{font-size:11.5px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="dot-row">
+        <div class="dot on"></div><div class="dot"></div><div class="dot"></div>
+      </div>
+      plasma
+    </div>
+    <nav>
+      <a href="#about">about</a>
+      <a href="#install">install</a>
+      <a href="#download">download</a>
+      <a href="https:
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero" style="border-top:none;padding-top:80px;">
+    <div class="eyebrow">python / terminal / realtime</div>
+    <h1>plasma<span class="cursor">&nbsp;</span></h1>
+    <p class="tagline">
+      A <strong>terminal visualization engine</strong> written in Python.
+      Fluid plasma fields, rendered frame by frame, directly in your shell — no GPU, no display server, just characters and math.
+    </p>
+
+    <div class="cta-row">
+      <a id="downloadBtn" class="btn" href="https:
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        download main.py
+      </a>
+      <a class="btn-ghost" href="#install">or install via source →</a>
+      <a class="btn-ghost" href="https:
+    </div>
+
+    <div class="term">
+      <div class="term-bar">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <span>~/plasma — python3 main.py</span>
+      </div>
+      <div class="term-body">
+        <div class="line"><span class="prompt">$</span> <span class="out">python3 main.py --width 120 --speed 0.6</span></div>
+        <div class="line"><span class="bright">plasma</span> v1.0 — initializing render buffer...</div>
+        <div class="line">frame_time: <span class="bright">8ms</span>   fps: <span class="bright">120</span>   mode: <span class="bright">ANSI256</span></div>
+        <canvas id="plasma-canvas"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <section id="about">
+    <div class="section-label">01 — about</div>
+    <h2>Math, mapped to characters.</h2>
+    <p style="color:var(--grey);max-width:600px;margin-bottom:34px;">
+      plasma computes an interference pattern of sine waves across a 2D grid, every frame, and
+      maps intensity to a ramp of terminal glyphs and greyscale ANSI codes. The result is a slow,
+      shifting field that runs entirely inside a text terminal.
+    </p>
+
+    <div class="grid">
+      <div class="cell">
+        <div class="idx">render</div>
+        <h3>Pure Python core</h3>
+        <p>No compiled extensions required. Runs anywhere Python 3 runs, including over SSH.</p>
+      </div>
+      <div class="cell">
+        <div class="idx">output</div>
+        <h3>ANSI greyscale</h3>
+        <p>256-color ramp mapped to field intensity — from black through grey to white.</p>
+      </div>
+      <div class="cell">
+        <div class="idx">control</div>
+        <h3>Live parameters</h3>
+        <p>Adjust width, speed, and wave count as flags, or interactively while it runs.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="section-label">02 — install</div>
+    <h2>Get it running.</h2>
+    <p style="color:var(--grey);margin-bottom:24px;">Single file. No dependencies outside the standard library.</p>
+    <pre class="codeblock"><span class="c"># download</span>
+<span class="k">curl</span> -O https:
+
+<span class="c"># run</span>
+<span class="k">python3</span> main.py</pre>
+  </section>
+
+  <section id="download">
+    <div class="section-label">03 — download</div>
+    <h2>Take plasma with you.</h2>
+    <p style="color:var(--grey);max-width:560px;margin-bottom:30px;">
+      One file, dropped straight into your terminal. Opens in a new tab, ready to save.
+    </p>
+    <a class="btn" href="https:
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      download main.py
+    </a>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap" style="display:flex;justify-content:space-between;width:100%;flex-wrap:wrap;gap:12px;">
+    <span>plasma — terminal visualization, written in Python.</span>
+    <span><a href="https:
+  </div>
+</footer>
+
+<script>
+  
+  const canvas = document.getElementById('plasma-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    w = canvas.width;
+    h = canvas.height;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const cell = 6;
+  let t = 0;
+
+  function draw(){
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,w,h);
+    const cols = Math.ceil(w/cell);
+    const rows = Math.ceil(h/cell);
+    for(let y=0;y<rows;y++){
+      for(let x=0;x<cols;x++){
+        const v = Math.sin(x*0.25 + t) +
+                   Math.sin(y*0.22 + t*0.8) +
+                   Math.sin((x+y)*0.15 + t*1.3) +
+                   Math.sin(Math.sqrt(x*x+y*y)*0.2 - t);
+        const norm = (v + 4) / 8; 
+        const grey = Math.floor(norm * 200) + 20;
+        ctx.fillStyle = `rgb(${grey},${grey},${grey})`;
+        ctx.fillRect(x*cell, y*cell, cell-1, cell-1);
+      }
+    }
+    t += 0.045;
+    requestAnimationFrame(draw);
+  }
+  draw();
+</script>
+
+</body>
+</html>
